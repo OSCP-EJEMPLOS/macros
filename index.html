@@ -2,22 +2,10 @@
 <html lang="es">
 <head>
     <meta
-	
-	
-		
-	
-	
-		Activar 2,80% cashback
+
 	
  charset="UTF-8">
     <meta
-	
-	
-		
-	
-	
-		Activar 2,80% cashback
-	
  name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora de Macros + Open Food Facts</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,6 +21,15 @@
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     </style>
+	<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand(); // Abre la calculadora a pantalla completa
+        }
+    });
+</script>
 </head>
 <body class="p-4 md:p-8 max-w-6xl mx-auto">
 
