@@ -34,9 +34,9 @@
             <h1 id="mainHeaderTitle" class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-indigo-400 via-sky-400 to-cyan-400 bg-clip-text text-transparent">
               <i class="fa-solid fa-layer-group text-indigo-400 mr-2"></i>Hábitos & Bitácora Diaria
             </h1>
-            <span id="userEmailBadge" class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span id="userEmailBadge" class="hidden items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
               <i class="fa-regular fa-envelope text-indigo-400"></i>
-              <span id="userEmailText">maquce69@gmail.com</span>
+              <span id="userEmailText"></span>
             </span>
           </div>
           <p id="currentDateDisplay" class="text-slate-400 text-sm">Cargando fecha...</p>
@@ -50,7 +50,7 @@
             <div>
               <div class="flex items-center gap-1.5">
                 <span id="weatherTemp" class="font-bold text-slate-100 text-sm">--°C</span>
-                <span id="weatherCity" class="text-slate-400 font-medium">Getafe</span>
+                <span id="weatherCity" class="text-slate-400 font-medium">Madrid</span>
               </div>
               <div id="weatherDesc" class="text-[11px] text-slate-500">Cargando clima...</div>
             </div>
@@ -90,8 +90,8 @@
             <span>Cargar Semana Drive</span>
           </button>
 
-          <button type="button" onclick="toggleConfigModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2.5 rounded-xl border border-slate-700 transition" title="Configurar conexión y parámetros en Google Drive">
-            <i class="fa-solid fa-sliders text-emerald-400"></i>
+          <button type="button" onclick="toggleConfigModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2.5 rounded-xl border border-slate-700 transition" title="Configurar conexión segura y parámetros en Google Drive">
+            <i class="fa-solid fa-shield-halved text-emerald-400"></i>
           </button>
         </div>
       </div>
@@ -185,8 +185,10 @@
           <!-- Indicador visual de Carpeta Única en Drive -->
           <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 mb-4">
             <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 flex items-center justify-between">
-              <span>Carpeta única en Google Drive</span>
-              <i class="fa-brands fa-google-drive text-emerald-400"></i>
+              <span>Carpeta protegida en Google Drive</span>
+              <span id="securityStatusBadge" class="text-[10px] text-emerald-400 flex items-center gap-1">
+                <i class="fa-solid fa-lock"></i> Token Activo
+              </span>
             </div>
             <div id="folderTreePreview" class="font-mono text-xs text-emerald-400 truncate select-all">
               Registro_Diario / 2026-10-15_registro.txt
@@ -247,54 +249,66 @@
     </div>
   </div>
 
-  <!-- Modal Configuración Google Drive + Parámetros Personalizados -->
+  <!-- Modal Configuración Segura Google Drive + Parámetros Personalizados -->
   <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-bold flex items-center gap-2">
-          <i class="fa-brands fa-google-drive text-emerald-400"></i> Configuración & Parámetros en Drive
+          <i class="fa-solid fa-shield-halved text-emerald-400"></i> Conexión Segura & Parámetros Drive
         </h3>
         <button type="button" onclick="toggleConfigModal()" class="text-slate-400 hover:text-white">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
       <p class="text-xs text-slate-300 leading-relaxed">
-        Estos ajustes y tu perfil se guardan también en el archivo <strong>parametros.json</strong> dentro de tu carpeta de Google Drive para que se sincronicen automáticamente al cargar.
+        Tu clave secreta y la URL se guardan únicamente en este navegador. Tu nombre, correo, ciudad y objetivos se sincronizan con <strong>parametros.json</strong> dentro de tu carpeta privada <code>Registro_Diario</code>.
       </p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <!-- Bloque de Seguridad: Webhook + Token -->
+      <div class="space-y-3 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">URL del Webhook (Google Apps Script)</label>
+          <input type="url" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="text-xs text-emerald-400 font-semibold block mb-1">
+            <i class="fa-solid fa-key mr-1"></i> Clave Secreta (SECRET_TOKEN en tu script.gs)
+          </label>
+          <div class="relative flex items-center">
+            <input type="password" id="secretTokenInput" placeholder="Introduce la misma clave que pusiste en script.gs" 
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3.5 pr-10 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 text-slate-400 hover:text-slate-200 text-xs" title="Mostrar/Ocultar clave">
+              <i id="eyeIcon" class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloque de Perfil Personalizable -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
         <div>
           <label class="text-xs text-slate-400 block mb-1">Tu Nombre (para el título)</label>
-          <input type="text" id="userNameInput" placeholder="Miguel Ángel" 
+          <input type="text" id="userNameInput" placeholder="Ej: Miguel Ángel" 
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="text-xs text-slate-400 block mb-1">Tu Correo Electrónico</label>
-          <input type="email" id="userEmailInput" placeholder="maquce69@gmail.com" 
+          <input type="email" id="userEmailInput" placeholder="tu@correo.com" 
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
         </div>
       </div>
 
       <div>
         <label class="text-xs text-slate-400 block mb-1">Ciudad para el Clima en Cabecera</label>
-        <input type="text" id="userCityInput" placeholder="Getafe" 
+        <input type="text" id="userCityInput" placeholder="Ej: Getafe" 
           class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
-      </div>
-
-      <div class="pt-2 border-t border-slate-800">
-        <label class="text-xs text-slate-400 block mb-1">URL del Webhook (Google Apps Script)</label>
-        <input type="url" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
-          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
-      </div>
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">Nombre de la carpeta en tu Drive</label>
-        <input type="text" id="rootFolderInput" placeholder="Registro_Diario" value="Registro_Diario"
-          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
       </div>
 
       <div class="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-slate-800">
         <button type="button" onclick="loadParamsFromDrive()" class="px-3 py-2 rounded-xl text-xs bg-slate-800 text-cyan-400 hover:bg-slate-700 border border-slate-700">
-          <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Leer parametros.json de Drive
+          <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Recuperar parametros.json de Drive
         </button>
         <div class="flex gap-2">
           <button type="button" onclick="toggleConfigModal()" class="px-4 py-2 rounded-xl text-sm bg-slate-800 text-slate-300 hover:bg-slate-700">Cancelar</button>
@@ -313,11 +327,13 @@
       { id: 'h4', name: 'Lectura o desconexión digital', icon: 'fa-book-open' }
     ];
 
+    // Sin datos sensibles hardcodeados en el código público
     const DEFAULT_CONFIG = {
       webhookUrl: '',
+      secretToken: '',
       rootFolder: 'Registro_Diario',
-      userName: 'Miguel Ángel',
-      userEmail: 'maquce69@gmail.com',
+      userName: '',
+      userEmail: '',
       city: 'Getafe'
     };
 
@@ -347,7 +363,6 @@
       return String(str || '').trim().toLowerCase();
     }
 
-    // Asigna un icono automático según el texto si un hábito cargado de Drive no tenía icono
     function inferIconForHabit(name, existingIcon) {
       if (existingIcon) return existingIcon;
       const n = normalizeText(name);
@@ -380,7 +395,6 @@
       return new Date(date.setDate(diff));
     }
 
-    // Devuelve los 7 objetos Date (Lunes a Domingo) de la semana de 'refDate'
     function getWeekDays(refDate) {
       const monday = getMonday(refDate);
       const days = [];
@@ -406,18 +420,29 @@
       fetchWeather();
       goToToday();
 
-      // Si ya hay webhook configurado, sincroniza parámetros y la semana en curso en segundo plano
-      if (config.webhookUrl) {
+      if (config.webhookUrl && config.secretToken) {
         fetchWeekFromDrive(true);
       }
     }
 
     function populateConfigInputs() {
       document.getElementById('webhookUrlInput').value = config.webhookUrl || '';
-      document.getElementById('rootFolderInput').value = config.rootFolder || 'Registro_Diario';
-      document.getElementById('userNameInput').value = config.userName || 'Miguel Ángel';
-      document.getElementById('userEmailInput').value = config.userEmail || 'maquce69@gmail.com';
+      document.getElementById('secretTokenInput').value = config.secretToken || '';
+      document.getElementById('userNameInput').value = config.userName || '';
+      document.getElementById('userEmailInput').value = config.userEmail || '';
       document.getElementById('userCityInput').value = config.city || 'Getafe';
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('secretTokenInput');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-regular fa-eye';
+      }
     }
 
     function renderProfileHeader() {
@@ -430,19 +455,30 @@
       if (config.userEmail) {
         emailText.textContent = config.userEmail;
         emailBadge.classList.remove('hidden');
+        emailBadge.classList.add('inline-flex');
       } else {
         emailBadge.classList.add('hidden');
+        emailBadge.classList.remove('inline-flex');
+      }
+
+      const secBadge = document.getElementById('securityStatusBadge');
+      if (config.secretToken) {
+        secBadge.className = 'text-[10px] text-emerald-400 flex items-center gap-1';
+        secBadge.innerHTML = '<i class="fa-solid fa-lock"></i> Token Configurado';
+      } else {
+        secBadge.className = 'text-[10px] text-amber-400 flex items-center gap-1';
+        secBadge.innerHTML = '<i class="fa-solid fa-unlock"></i> Sin Token';
       }
     }
 
-    // --- CLIMA EN CABECERA (Open-Meteo sin API Key) ---
+    // --- CLIMA EN CABECERA ---
     async function fetchWeather() {
       const city = (config.city || 'Getafe').trim();
       document.getElementById('weatherCity').textContent = city;
       try {
         const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=es&format=json`);
         const geoData = await geoRes.json();
-        let lat = 40.3082, lon = -3.7324; // Por defecto Getafe, Madrid
+        let lat = 40.3082, lon = -3.7324;
         if (geoData.results && geoData.results.length > 0) {
           lat = geoData.results[0].latitude;
           lon = geoData.results[0].longitude;
@@ -457,7 +493,7 @@
           const info = getWeatherVisuals(code);
           document.getElementById('weatherTemp').textContent = `${temp}°C`;
           document.getElementById('weatherDesc').textContent = info.desc;
-          document.getElementById('weatherIcon').className = `fa-solid ${info.icon}${info.color} text-lg`;
+          document.getElementById('weatherIcon').className = `fa-solid ${info.icon} ${info.color} text-lg`;
         }
       } catch (e) {
         document.getElementById('weatherDesc').textContent = 'Clima local';
@@ -471,650 +507,4 @@
       if (code <= 67) return { desc: 'Lluvia', icon: 'fa-cloud-rain', color: 'text-sky-400' };
       if (code <= 77) return { desc: 'Nieve', icon: 'fa-snowflake', color: 'text-cyan-200' };
       if (code <= 82) return { desc: 'Chubascos', icon: 'fa-cloud-showers-heavy', color: 'text-sky-400' };
-      return { desc: 'Tormenta', icon: 'fa-cloud-bolt', color: 'text-yellow-400' };
-    }
-
-    // --- NAVEGACIÓN DE FECHAS ---
-    function goToToday() {
-      selectedDate = new Date();
-      updateUI();
-    }
-
-    function changeDate(offsetDays) {
-      selectedDate.setDate(selectedDate.getDate() + offsetDays);
-      updateUI();
-    }
-
-    function onDateChange() {
-      const val = document.getElementById('datePicker').value;
-      if (val) {
-        const [y, m, d] = val.split('-').map(Number);
-        selectedDate = new Date(y, m - 1, d);
-        updateUI();
-      }
-    }
-
-    // --- RENDERIZADO PRINCIPAL ---
-    function updateUI() {
-      const dateKey = formatDateKey(selectedDate);
-      document.getElementById('datePicker').value = dateKey;
-
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const formatted = selectedDate.toLocaleDateString('es-ES', options);
-      document.getElementById('currentDateDisplay').textContent = formatted.charAt(0).toUpperCase() + formatted.slice(1);
-
-      renderWeekDaysStrip();
-      renderHabits(dateKey);
-      renderWorkLogSection(dateKey);
-      renderWeeklyChart();
-    }
-
-    // Renderiza los 7 botones de la semana (Lun a Dom) para cambiar rápido de día y ver cuáles tienen datos
-    function renderWeekDaysStrip() {
-      const stripEl = document.getElementById('weekDaysStrip');
-      stripEl.innerHTML = '';
-      const weekDays = getWeekDays(selectedDate);
-      const selectedKey = formatDateKey(selectedDate);
-      const todayKey = formatDateKey(new Date());
-      const shortNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
-      weekDays.forEach((d, idx) => {
-        const key = formatDateKey(d);
-        const isSelected = key === selectedKey;
-        const isToday = key === todayKey;
-        const doneCount = (completions[key] || []).filter(id => habits.some(h => h.id === id)).length;
-        const hasNotes = Boolean(workNotes[key] && workNotes[key].trim());
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.onclick = () => {
-          selectedDate = new Date(d);
-          updateUI();
-        };
-        btn.className = `flex flex-col items-center justify-center py-1.5 px-2 rounded-xl border text-xs transition ${
-          isSelected
-            ? 'bg-indigo-600/30 border-indigo-400 text-white font-bold shadow'
-            : 'bg-slate-800/50 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-        }`;
-
-        btn.innerHTML = `
-          <span class="text-[10px] uppercase tracking-wider ${isToday ? 'text-cyan-400 font-bold' : ''}">${shortNames[idx]}</span>
-          <span class="text-sm mt-0.5">${d.getDate()}</span>
-          <div class="flex items-center gap-1 mt-1 h-1.5">
-            ${doneCount > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-indigo-400" title="Objetivos cumplidos"></span>' : ''}
-            ${hasNotes ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Con notas"></span>' : ''}
-          </div>
-        `;
-        stripEl.appendChild(btn);
-      });
-    }
-
-    // --- GESTIÓN DE HÁBITOS Y RACHAS ---
-    function calculateStreak(habitId) {
-      let streak = 0;
-      let checkDate = new Date(selectedDate);
-      const todayKey = formatDateKey(checkDate);
-
-      if (!(completions[todayKey] || []).includes(habitId)) {
-        checkDate.setDate(checkDate.getDate() - 1);
-      }
-
-      while (true) {
-        const key = formatDateKey(checkDate);
-        if ((completions[key] || []).includes(habitId)) {
-          streak++;
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-      return streak;
-    }
-
-    function renderHabits(dateKey) {
-      const listEl = document.getElementById('habitsList');
-      listEl.innerHTML = '';
-      const dayCompleted = completions[dateKey] || [];
-
-      habits.forEach(habit => {
-        const isDone = dayCompleted.includes(habit.id);
-        const streak = calculateStreak(habit.id);
-        const iconClass = inferIconForHabit(habit.name, habit.icon);
-
-        const item = document.createElement('div');
-        item.className = `flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer ${
-          isDone 
-            ? 'bg-indigo-950/35 border-indigo-500/40 text-slate-100' 
-            : 'bg-slate-800/40 border-slate-800 text-slate-300 hover:border-slate-700'
-        }`;
-        item.onclick = (e) => {
-          if (e.target.closest('button')) return;
-          toggleHabit(dateKey, habit.id);
-        };
-
-        item.innerHTML = `
-          <div class="flex items-center gap-3.5">
-            <div class="w-5 h-5 rounded-md flex items-center justify-center border transition ${
-              isDone ? 'bg-indigo-500 border-indigo-400 text-white' : 'border-slate-600 bg-slate-900'
-            }">
-              ${isDone ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-            </div>
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center ${
-              isDone ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-cyan-400'
-            }">
-              <i class="fa-solid ${iconClass} text-sm"></i>
-            </div>
-            <span class="text-sm font-medium ${isDone ? 'line-through text-slate-400' : ''}">${habit.name}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 ${
-              streak > 0 ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30' : 'bg-slate-800 text-slate-500'
-            }" title="Racha actual de días seguidos">
-              <i class="fa-solid fa-fire"></i> ${streak}d
-            </span>
-            <button type="button" onclick="deleteHabit('${habit.id}')" class="text-slate-500 hover:text-rose-400 p-1 transition" title="Eliminar hábito">
-              <i class="fa-regular fa-trash-can text-xs"></i>
-            </button>
-          </div>
-        `;
-        listEl.appendChild(item);
-      });
-
-      const validCompletedCount = dayCompleted.filter(id => habits.some(h => h.id === id)).length;
-      const totalHabits = habits.length;
-      const pct = totalHabits > 0 ? Math.round((validCompletedCount / totalHabits) * 100) : 0;
-
-      document.getElementById('dailyProgressBadge').textContent = `${validCompletedCount} / ${totalHabits} completados (${pct}%)`;
-      document.getElementById('dailyProgressBar').style.width = `${pct}%`;
-    }
-
-    function toggleHabit(dateKey, habitId) {
-      if (!completions[dateKey]) completions[dateKey] = [];
-      const idx = completions[dateKey].indexOf(habitId);
-      if (idx > -1) {
-        completions[dateKey].splice(idx, 1);
-      } else {
-        completions[dateKey].push(habitId);
-      }
-      localStorage.setItem('ht_completions', JSON.stringify(completions));
-      updateUI();
-    }
-
-    function addHabit() {
-      const input = document.getElementById('newHabitInput');
-      const iconSelect = document.getElementById('newHabitIconSelect');
-      const name = input.value.trim();
-      if (!name) return;
-      const icon = iconSelect ? iconSelect.value : inferIconForHabit(name);
-      habits.push({ id: 'h_' + Date.now(), name, icon });
-      localStorage.setItem('ht_habits', JSON.stringify(habits));
-      input.value = '';
-      updateUI();
-      saveParamsToDriveSilent();
-    }
-
-    function deleteHabit(id) {
-      habits = habits.filter(h => h.id !== id);
-      localStorage.setItem('ht_habits', JSON.stringify(habits));
-      updateUI();
-      saveParamsToDriveSilent();
-    }
-
-    function restoreDefaultHabits() {
-      habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-      localStorage.setItem('ht_habits', JSON.stringify(habits));
-      updateUI();
-      saveParamsToDriveSilent();
-    }
-
-    // --- GRÁFICO SEMANAL Y ESTADÍSTICAS ---
-    function renderWeeklyChart() {
-      const weekDays = getWeekDays(selectedDate);
-      const firstDay = weekDays[0];
-      const lastDay = weekDays[6];
-      document.getElementById('weekRangeSubtitle').textContent = 
-        `Semana del ${firstDay.getDate()}/${firstDay.getMonth()+1} al ${lastDay.getDate()}/${lastDay.getMonth()+1}`;
-
-      const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-      const dataCounts = [];
-      const bgColors = [];
-      const selectedKey = formatDateKey(selectedDate);
-      let weekTotalCompleted = 0;
-
-      weekDays.forEach((d, i) => {
-        const key = formatDateKey(d);
-        const count = (completions[key] || []).filter(id => habits.some(h => h.id === id)).length;
-        weekTotalCompleted += count;
-        dataCounts.push(count);
-        bgColors.push(key === selectedKey ? '#6366f1' : '#38bdf8');
-        labels[i] = `${labels[i]}${d.getDate()}`;
-      });
-
-      const maxPossibleWeek = Math.max(habits.length * 7, 1);
-      const weekPct = Math.round((weekTotalCompleted / maxPossibleWeek) * 100);
-      document.getElementById('weeklySuccessRateBadge').textContent = `Semana: ${weekTotalCompleted}/${habits.length * 7} (${weekPct}%)`;
-
-      if (typeof Chart === 'undefined') return;
-      try {
-        const ctx = document.getElementById('weeklyChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-
-        chartInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Hábitos cumplidos',
-              data: dataCounts,
-              backgroundColor: bgColors,
-              borderRadius: 8,
-              maxBarThickness: 38
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: Math.max(habits.length, 1),
-                ticks: { stepSize: 1, color: '#94a3b8' },
-                grid: { color: '#1e293b' }
-              },
-              x: {
-                ticks: { color: '#94a3b8' },
-                grid: { display: false }
-              }
-            },
-            plugins: {
-              legend: { display: false }
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('Error renderizando gráfico:', err);
-      }
-    }
-
-    // --- REGISTRO DE NOTAS Y CARPETA ÚNICA ---
-    function renderWorkLogSection(dateKey) {
-      const rootName = config.rootFolder || 'Registro_Diario';
-      document.getElementById('folderTreePreview').textContent = `${rootName} /${dateKey}_registro.txt`;
-
-      const workday = isWorkday(selectedDate);
-      const badge = document.getElementById('dayTypeBadge');
-      const statusText = document.getElementById('workdayStatusText');
-      const weekendBanner = document.getElementById('weekendBanner');
-      const workLogContainer = document.getElementById('workLogContainer');
-
-      document.getElementById('workNotesTextarea').value = workNotes[dateKey] || '';
-
-      if (workday) {
-        badge.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-        badge.textContent = 'Laborable';
-        statusText.textContent = 'Registro activo para guardar en carpeta única';
-        weekendBanner.classList.add('hidden');
-        workLogContainer.classList.remove('hidden');
-      } else {
-        badge.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
-        badge.textContent = 'Fin de Semana';
-        statusText.textContent = 'Día de descanso';
-        if (workNotes[dateKey]) {
-          weekendBanner.classList.add('hidden');
-          workLogContainer.classList.remove('hidden');
-        } else {
-          weekendBanner.classList.remove('hidden');
-          workLogContainer.classList.add('hidden');
-        }
-      }
-    }
-
-    function forceEnableWorkLog() {
-      document.getElementById('weekendBanner').classList.add('hidden');
-      document.getElementById('workLogContainer').classList.remove('hidden');
-    }
-
-    function addTimestampedEntry() {
-      const input = document.getElementById('quickLogInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const now = new Date();
-      const timeStr = now.toTimeString().slice(0, 5);
-      const textarea = document.getElementById('workNotesTextarea');
-      const prefix = textarea.value ? '\n' : '';
-      textarea.value += `${prefix}[${timeStr}] -${text}`;
-      input.value = '';
-      saveCurrentNotes();
-    }
-
-    function saveCurrentNotes() {
-      const dateKey = formatDateKey(selectedDate);
-      const content = document.getElementById('workNotesTextarea').value;
-      workNotes[dateKey] = content;
-      localStorage.setItem('ht_work_notes', JSON.stringify(workNotes));
-      renderWeekDaysStrip();
-    }
-
-    function buildTxtFileContent(dateKey) {
-      const dayCompleted = completions[dateKey] || [];
-      const completedNames = habits.filter(h => dayCompleted.includes(h.id)).map(h => `  [x] ${h.name}`);
-      const pendingNames = habits.filter(h => !dayCompleted.includes(h.id)).map(h => `  [ ] ${h.name}`);
-
-      return [
-        `==================================================`,
-        `REGISTRO DIARIO - FECHA: ${dateKey}`,
-        `==================================================`,
-        ``,
-        `--- HÁBITOS DEL DÍA (${completedNames.length}/${habits.length}) ---`,
-        ...completedNames,
-        ...pendingNames,
-        ``,
-        `--- REGISTRO DE ACTIVIDAD / NOTAS LABORALES ---`,
-        workNotes[dateKey] || '(Sin notas registradas)',
-        ``
-      ].join('\n');
-    }
-
-    function downloadTxtFile() {
-      const dateKey = formatDateKey(selectedDate);
-      const content = buildTxtFileContent(dateKey);
-
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${dateKey}_registro.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // --- GUARDAR DÍA ACTUAL Y PARÁMETROS EN DRIVE ---
-    async function syncToGoogleDrive() {
-      if (!config.webhookUrl) {
-        toggleConfigModal();
-        return;
-      }
-
-      const dateKey = formatDateKey(selectedDate);
-      const dayCompleted = completions[dateKey] || [];
-      const habitsSummary = [
-        `--- HÁBITOS DEL DÍA (${dayCompleted.length}/${habits.length}) ---`,
-        ...habits.filter(h => dayCompleted.includes(h.id)).map(h => `  [x] ${h.name}`),
-        ...habits.filter(h => !dayCompleted.includes(h.id)).map(h => `  [ ] ${h.name}`)
-      ].join('\n');
-
-      const btn = document.getElementById('btnSyncDrive');
-      const statusMsg = document.getElementById('syncStatusMsg');
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-      statusMsg.classList.remove('hidden');
-      statusMsg.className = 'text-xs text-center text-cyan-400 mt-2';
-      statusMsg.textContent = `Guardando ${dateKey}_registro.txt en "${config.rootFolder}"...`;
-
-      try {
-        await fetch(config.webhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'saveDay',
-            rootFolder: config.rootFolder || 'Registro_Diario',
-            fileName: `${dateKey}_registro.txt`,
-            dateKey: dateKey,
-            habitsSummary: habitsSummary,
-            rawNotes: workNotes[dateKey] || ''
-          })
-        });
-
-        statusMsg.className = 'text-xs text-center text-emerald-400 mt-2';
-        statusMsg.textContent = `¡Guardado en Drive (${dateKey}_registro.txt)!`;
-      } catch (err) {
-        statusMsg.className = 'text-xs text-center text-rose-400 mt-2';
-        statusMsg.textContent = 'Error de red al conectar con el script de Drive.';
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-brands fa-google-drive"></i> Guardar en Drive';
-      }
-    }
-
-    // --- CARGAR TODA LA SEMANA EN CURSO (LUNES A DOMINGO) + PARÁMETROS DESDE DRIVE ---
-    async function fetchWeekFromDrive(silent = false) {
-      if (!config.webhookUrl) {
-        if (!silent) toggleConfigModal();
-        return;
-      }
-
-      const weekDays = getWeekDays(selectedDate);
-      const dateKeys = weekDays.map(d => formatDateKey(d));
-      const firstKey = dateKeys[0];
-      const lastKey = dateKeys[6];
-
-      const btn = document.getElementById('btnFetchDrive');
-      const statusMsg = document.getElementById('syncStatusMsg');
-
-      btn.disabled = true;
-      if (!silent) {
-        statusMsg.classList.remove('hidden');
-        statusMsg.className = 'text-xs text-center text-cyan-400 mt-2';
-        statusMsg.textContent = `Cargando semana (${firstKey} al ${lastKey}) desde Drive...`;
-      }
-
-      try {
-        const url = new URL(config.webhookUrl);
-        url.searchParams.set('action', 'getWeek');
-        url.searchParams.set('rootFolder', config.rootFolder || 'Registro_Diario');
-        url.searchParams.set('dates', dateKeys.join(','));
-
-        const res = await fetch(url.toString(), { method: 'GET' });
-        const data = await res.json();
-
-        if (data.status === 'ok') {
-          // 1. Si viene parametros.json desde Drive, aplicar nombre, correo, ciudad y hábitos
-          if (data.params) {
-            applyRemoteParams(data.params);
-          }
-
-          let loadedFilesCount = 0;
-
-          // 2. Procesar los 7 días de la semana devueltos en data.days
-          if (data.days && typeof data.days === 'object') {
-            Object.entries(data.days).forEach(([dKey, dayData]) => {
-              if (dayData && dayData.found) {
-                loadedFilesCount++;
-                processSingleDayData(dKey, dayData);
-              }
-            });
-          } else if (data.found) {
-            // Compatibilidad por si el script de Drive aún no se actualizó a getWeek
-            const singleKey = formatDateKey(selectedDate);
-            loadedFilesCount = 1;
-            processSingleDayData(singleKey, data);
-          }
-
-          localStorage.setItem('ht_habits', JSON.stringify(habits));
-          localStorage.setItem('ht_completions', JSON.stringify(completions));
-          localStorage.setItem('ht_work_notes', JSON.stringify(workNotes));
-
-          updateUI();
-
-          if (!silent) {
-            statusMsg.classList.remove('hidden');
-            if (loadedFilesCount > 0) {
-              statusMsg.className = 'text-xs text-center text-emerald-400 mt-2';
-              statusMsg.textContent = `Semana cargada (${loadedFilesCount} día(s) con datos entre ${firstKey} y ${lastKey}).`;
-            } else {
-              statusMsg.className = 'text-xs text-center text-amber-400 mt-2';
-              statusMsg.textContent = `No se encontraron archivos en Drive para la semana del ${firstKey} al ${lastKey}.`;
-            }
-          }
-        }
-      } catch (err) {
-        if (!silent) {
-          statusMsg.classList.remove('hidden');
-          statusMsg.className = 'text-xs text-center text-rose-400 mt-2';
-          statusMsg.textContent = 'Error al consultar la semana en Drive.';
-        }
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    function processSingleDayData(dateKey, dayData) {
-      if (dayData.rawNotes && dayData.rawNotes !== '(Sin notas registradas)') {
-        workNotes[dateKey] = dayData.rawNotes;
-      }
-
-      const incomingNames = dayData.allHabitNames || dayData.completedHabitNames || [];
-      incomingNames.forEach(remoteName => {
-        const cleanName = String(remoteName || '').trim();
-        if (!cleanName) return;
-        const exists = habits.some(h => normalizeText(h.name) === normalizeText(cleanName));
-        if (!exists) {
-          habits.push({
-            id: 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: cleanName,
-            icon: inferIconForHabit(cleanName)
-          });
-        }
-      });
-
-      if (Array.isArray(dayData.completedHabitNames)) {
-        const completedNorm = dayData.completedHabitNames.map(normalizeText);
-        const matchedIds = habits
-          .filter(h => completedNorm.includes(normalizeText(h.name)))
-          .map(h => h.id);
-        completions[dateKey] = matchedIds;
-      }
-    }
-
-    // --- GESTIÓN DE PARÁMETROS EN DRIVE (parametros.json) ---
-    function applyRemoteParams(paramsObj) {
-      if (!paramsObj || typeof paramsObj !== 'object') return;
-      if (paramsObj.userName) config.userName = paramsObj.userName;
-      if (paramsObj.userEmail) config.userEmail = paramsObj.userEmail;
-      if (paramsObj.city) config.city = paramsObj.city;
-      if (Array.isArray(paramsObj.habits) && paramsObj.habits.length > 0) {
-        habits = paramsObj.habits.map(h => ({
-          id: h.id || ('h_' + Math.random().toString(36).slice(2, 7)),
-          name: h.name,
-          icon: inferIconForHabit(h.name, h.icon)
-        }));
-        localStorage.setItem('ht_habits', JSON.stringify(habits));
-      }
-      localStorage.setItem('ht_config', JSON.stringify(config));
-      populateConfigInputs();
-      renderProfileHeader();
-      fetchWeather();
-    }
-
-    async function loadParamsFromDrive() {
-      const urlVal = document.getElementById('webhookUrlInput').value.trim() || config.webhookUrl;
-      const folderVal = document.getElementById('rootFolderInput').value.trim() || config.rootFolder || 'Registro_Diario';
-      if (!urlVal) return;
-
-      try {
-        const url = new URL(urlVal);
-        url.searchParams.set('action', 'getParams');
-        url.searchParams.set('rootFolder', folderVal);
-        const res = await fetch(url.toString(), { method: 'GET' });
-        const data = await res.json();
-        if (data.status === 'ok' && data.params) {
-          applyRemoteParams(data.params);
-          updateUI();
-        }
-      } catch (e) {
-        console.warn('No se pudo leer parametros.json:', e);
-      }
-    }
-
-    async function saveParamsToDriveSilent() {
-      if (!config.webhookUrl) return;
-      try {
-        await fetch(config.webhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'saveParams',
-            rootFolder: config.rootFolder || 'Registro_Diario',
-            params: {
-              userName: config.userName,
-              userEmail: config.userEmail,
-              city: config.city,
-              habits: habits
-            }
-          })
-        });
-      } catch (e) {
-        console.warn('Error guardando parametros.json en Drive:', e);
-      }
-    }
-
-    function searchHistory() {
-      const query = document.getElementById('searchNotesInput').value.trim().toLowerCase();
-      const resultsEl = document.getElementById('searchResults');
-      resultsEl.innerHTML = '';
-
-      if (!query) {
-        resultsEl.classList.add('hidden');
-        return;
-      }
-
-      const matches = Object.entries(workNotes)
-        .filter(([date, text]) => text && text.toLowerCase().includes(query))
-        .sort((a, b) => b[0].localeCompare(a[0]));
-
-      resultsEl.classList.remove('hidden');
-
-      if (matches.length === 0) {
-        resultsEl.innerHTML = '<div class="text-xs text-slate-500 p-2">No se encontraron notas con ese texto.</div>';
-        return;
-      }
-
-      matches.forEach(([dateKey, text]) => {
-        const div = document.createElement('div');
-        div.className = 'p-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg cursor-pointer text-xs transition border border-slate-700/60';
-        div.onclick = () => {
-          const [y, m, d] = dateKey.split('-').map(Number);
-          selectedDate = new Date(y, m - 1, d);
-          updateUI();
-        };
-        div.innerHTML = `
-          <div class="font-semibold text-indigo-300">${dateKey}</div>
-          <div class="text-slate-400 truncate">${text.replace(/\n/g, ' ')}</div>
-        `;
-        resultsEl.appendChild(div);
-      });
-    }
-
-    function toggleConfigModal() {
-      const modal = document.getElementById('configModal');
-      modal.classList.toggle('hidden');
-      modal.classList.toggle('flex');
-    }
-
-    function saveConfig() {
-      config.webhookUrl = document.getElementById('webhookUrlInput').value.trim();
-      config.rootFolder = document.getElementById('rootFolderInput').value.trim() || 'Registro_Diario';
-      config.userName = document.getElementById('userNameInput').value.trim() || 'Miguel Ángel';
-      config.userEmail = document.getElementById('userEmailInput').value.trim() || 'maquce69@gmail.com';
-      config.city = document.getElementById('userCityInput').value.trim() || 'Getafe';
-
-      localStorage.setItem('ht_config', JSON.stringify(config));
-      renderProfileHeader();
-      fetchWeather();
-      saveParamsToDriveSilent();
-      toggleConfigModal();
-      updateUI();
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  </script>
-</body>
-</html>
+      return { desc: 'Tormenta', icon: 'fa-cloud-bolt', color: '
