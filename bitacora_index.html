@@ -6,6 +6,7 @@
   <title>Panel de Hábitos y Bitácora Diaria</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     if (typeof tailwind !== 'undefined') {
@@ -26,10 +27,42 @@
 
   <div class="max-w-6xl mx-auto space-y-5">
     
+    <!-- BARRA SUPERIOR DE ACCESO MULTI-USUARIO + BOTÓN NUEVOS USUARIOS -->
+    <div id="unlockVaultBanner" class="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 p-4 rounded-2xl border border-indigo-500/40 shadow-lg flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0">
+          <i class="fa-solid fa-user-lock text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-slate-100">Acceso Multi-Usuario (Drive Personal Cifrado)</h2>
+            <span id="activeSessionTag" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              Conectado
+            </span>
+          </div>
+          <p id="unlockStatusText" class="text-xs text-slate-400">Introduce tu Usuario y tu Key para cargar tus parámetros y tu semana desde tu Google Drive.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <input type="text" id="loginUserInput" placeholder="Usuario (ej: miguel)" 
+          class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-400 w-36">
+        <input type="password" id="masterKeyInput" placeholder="Tu Key / Contraseña..." 
+          onkeydown="if(event.key==='Enter') unlockWithMasterKey()"
+          class="bg-slate-950 border border-indigo-500/50 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-400 w-44">
+        <button type="button" onclick="unlockWithMasterKey()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition whitespace-nowrap shadow">
+          <i class="fa-solid fa-key mr-1"></i> Entrar
+        </button>
+        <button type="button" onclick="toggleOnboardingModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition whitespace-nowrap shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-user-plus"></i> Nuevos Usuarios (Guía)
+        </button>
+      </div>
+    </div>
+
     <!-- Cabecera Principal -->
     <header class="bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
       
-      <!-- Fila Superior: Título, Clima y Calculadora de Macros -->
+      <!-- Fila Superior: Título Personalizado, Clima y Calculadora de Macros -->
       <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-800">
         <div>
           <div class="flex flex-wrap items-center gap-2.5">
@@ -40,6 +73,7 @@
               <i class="fa-regular fa-envelope text-indigo-400"></i>
               <span id="userEmailText"></span>
             </span>
+            <span id="userRoleBadge" class="hidden text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"></span>
           </div>
           <p id="currentDateDisplay" class="text-slate-400 text-sm mt-1">Jueves, 15 de octubre de 2026</p>
         </div>
@@ -50,7 +84,7 @@
             <i id="weatherIcon" class="fa-solid fa-cloud-sun text-amber-400 text-lg"></i>
             <div>
               <div class="flex items-center gap-1.5">
-                <span id="weatherTemp" class="font-bold text-slate-100 text-sm">19°C</span>
+                <span id="weatherTemp" class="font-bold text-slate-100 text-sm">--°C</span>
                 <span id="weatherCity" class="text-slate-400 font-medium">Getafe</span>
               </div>
               <div id="weatherDesc" class="text-[11px] text-slate-500">Clima actual</div>
@@ -89,72 +123,134 @@
             <span>Cargar Semana Drive</span>
           </button>
 
-          <button type="button" onclick="toggleConfigPanel()" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 px-3.5 py-2.5 rounded-xl border border-emerald-500/40 transition flex items-center gap-2">
-            <i class="fa-solid fa-key"></i>
-            <span class="text-xs font-semibold">Token / Config</span>
+          <button type="button" onclick="toggleOnboardingModal()" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 px-3 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-1.5" title="Configuración y Alta de Usuarios">
+            <i class="fa-solid fa-sliders"></i>
+            <span class="text-xs font-semibold hidden sm:inline">Config / Alta</span>
           </button>
         </div>
       </div>
+    </header>
 
-      <!-- PANEL DIRECTO INTEGRADO PARA METER EL TOKEN Y LA URL (No depende de ventanas flotantes) -->
-      <div id="inlineConfigPanel" class="hidden pt-4 border-t border-slate-800">
-        <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-4">
-          <div class="flex justify-between items-center">
-            <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-2">
-              <i class="fa-solid fa-shield-halved"></i> Configurar Token Secreto, Webhook de Drive y Perfil
-            </h3>
-            <button type="button" onclick="toggleConfigPanel()" class="text-xs text-slate-400 hover:text-white">
-              Cerrar [X]
-            </button>
+    <!-- MODAL / GUÍA INTERACTIVA DE ALTA PARA NUEVOS USUARIOS Y CONFIGURACIÓN -->
+    <div id="onboardingModal" class="hidden bg-slate-900 border-2 border-indigo-500/50 rounded-2xl p-6 shadow-2xl space-y-6">
+      <div class="flex justify-between items-start border-b border-slate-800 pb-4">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Guía Rápida en 3 Pasos
+          </span>
+          <h2 class="text-xl font-bold text-white mt-2 flex items-center gap-2">
+            <i class="fa-solid fa-rocket text-indigo-400"></i> Alta de Nuevo Usuario (Conecta tu propio Google Drive)
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Cada usuario guarda sus notas y objetivos en su propio Google Drive. El script ya viene preconfigurado con 3 perfiles fijos para que no tengas que tocar código.
+          </p>
+        </div>
+        <button type="button" onclick="toggleOnboardingModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-xs font-semibold">
+          Cerrar [X]
+        </button>
+      </div>
+
+      <!-- PASO 1: Copiar el Script Fijo y desplegarlo en Drive -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h3 class="text-sm font-bold text-cyan-400">
+             PASO 1: Crea el conector en tu Google Drive (Solo se hace 1 vez, tarda 1 minuto)
+          </h3>
+          <button type="button" onclick="copyUniversalScript()" id="btnCopyScript" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 self-start">
+            <i class="fa-regular fa-copy"></i> Copiar Script Universal Fijo
+          </button>
+        </div>
+        <ol class="text-xs text-slate-300 space-y-1.5 list-decimal list-inside leading-relaxed">
+          <li>Pulsa el botón azul <strong>"Copiar Script Universal Fijo"</strong> de arriba.</li>
+          <li>Entra en <a href="https://script.google.com" target="_blank" class="text-indigo-400 underline font-semibold">script.google.com</a> con tu cuenta de Google y pulsa <strong>"Nuevo proyecto"</strong>.</li>
+          <li>Borra lo que haya en el editor, <strong>pega el código copiado</strong> y pulsa el icono del disquete (Guardar).</li>
+          <li>Arriba a la derecha pulsa <strong>Implementar</strong> &gt; <strong>Nueva implementación</strong>.</li>
+          <li>Elige el engranaje <strong>"Aplicación web"</strong>: en <em>Ejecutar como</em> deja <strong>"Yo"</strong> y en <em>Quién tiene acceso</em> selecciona <strong>"Cualquier persona"</strong>.</li>
+          <li>Pulsa <strong>Implementar</strong>, autoriza el acceso a tu Drive y <strong>copia la URL de la aplicación web</strong> (termina en <code>/exec</code>).</li>
+        </ol>
+      </div>
+
+      <!-- PASO 2: Rellenar Datos y Elegir uno de los 3 Perfiles del Script -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+        <h3 class="text-sm font-bold text-indigo-400">
+          PASO 2: Rellena tus datos (El Token se configura solo según el perfil)
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Alias de Usuario (sin espacios)</label>
+            <input type="text" id="wizUserAlias" placeholder="Ej: carlos" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">1. URL del Webhook (Apps Script)</label>
-              <input type="text" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
-            </div>
-            <div>
-              <label class="text-xs text-emerald-400 font-semibold block mb-1">2. Clave Secreta (SECRET_TOKEN)</label>
-              <input type="password" id="secretTokenInput" placeholder="Pega aquí tu clave secreta de script.gs" 
-                class="w-full bg-slate-900 border border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-400">
-            </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">3. Carpeta en Google Drive</label>
-              <input type="text" id="rootFolderInput" placeholder="Registro_Diario" value="Registro_Diario"
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
-            </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Tu Nombre (para el título)</label>
+            <input type="text" id="userNameInput" placeholder="Ej: Carlos" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
           </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">Tu Nombre (Cabecera)</label>
-              <input type="text" id="userNameInput" placeholder="Miguel Ángel" 
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
-            </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">Tu Correo</label>
-              <input type="email" id="userEmailInput" placeholder="tu@correo.com" 
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
-            </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">Ciudad (Clima)</label>
-              <input type="text" id="userCityInput" placeholder="Getafe" 
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
-            </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Tu Correo Electrónico</label>
+            <input type="email" id="userEmailInput" placeholder="carlos@gmail.com" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
           </div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Tu Ciudad (para el clima)</label>
+            <input type="text" id="userCityInput" placeholder="Getafe" value="Getafe"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
+          </div>
+        </div>
 
-          <div class="flex flex-wrap justify-between items-center gap-2 pt-2">
-            <button type="button" onclick="loadParamsFromDrive()" class="px-3 py-2 rounded-lg text-xs bg-slate-800 text-cyan-400 hover:bg-slate-700 border border-slate-700">
-              <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Leer parametros.json desde Drive
-            </button>
-            <button type="button" onclick="saveConfig()" class="px-4 py-2 rounded-lg text-xs bg-emerald-600 text-white hover:bg-emerald-500 font-semibold">
-              <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Token y Configuración
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80">
+          <div>
+            <label class="text-xs text-emerald-400 font-semibold block mb-1">Perfil en el Script (3 Fijos)</label>
+            <select id="profileRoleSelect" onchange="onProfileRoleChange()" class="w-full bg-slate-900 border border-emerald-500/50 rounded-lg px-3 py-2 text-xs text-slate-100">
+              <option value="invitado">👤 Invitado / Usuario Estándar (Recomendado)</option>
+              <option value="admin">👑 Propietario / Admin Principal</option>
+              <option value="emergencia">🚨 Perfil de Emergencia (Respaldo)</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs text-slate-400 block mb-1">Pega aquí tu URL de Google Apps Script (terminada en /exec)</label>
+            <input type="text" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100">
+          </div>
+        </div>
+
+        <!-- Campos automáticos del perfil seleccionado (ocultos a errores del usuario) -->
+        <input type="hidden" id="secretTokenInput" value="TK_INVITADO_2026">
+        <input type="hidden" id="rootFolderInput" value="Registro_Diario_Invitado">
+      </div>
+
+      <!-- PASO 3: Contraseña Personal y Activación Inmediata -->
+      <div class="bg-indigo-950/30 p-4 rounded-xl border border-indigo-500/40 space-y-3">
+        <h3 class="text-sm font-bold text-emerald-400">
+          PASO 3: Elige tu Key / Contraseña Personal y Activa tu Cuenta
+        </h3>
+        <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <input type="password" id="encryptPassInput" placeholder="Escribe la contraseña con la que entrarás..." 
+            class="bg-slate-950 border border-indigo-500/50 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 sm:w-72">
+          <button type="button" onclick="saveAndGenerateUserVault()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition shadow-lg">
+            🚀 Activar mi Cuenta en este Navegador y Generar Código
+          </button>
+          <button type="button" onclick="lockAndClearLocal()" class="bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 text-xs px-3.5 py-2.5 rounded-xl border border-rose-500/30">
+            Cerrar sesión local
+          </button>
+        </div>
+
+        <!-- Caja con la línea lista por si quieren mandársela al administrador para el HTML de GitHub -->
+        <div id="generatedCodeContainer" class="hidden pt-3 border-t border-indigo-500/30 space-y-1.5">
+          <label class="text-[11px] text-indigo-300 font-semibold block">
+            ✅ ¡Cuenta activada! Ya puedes usar tu bitácora abajo. Si quieres que tu usuario quede pre-registrado en GitHub Pages para entrar desde cualquier móvil u ordenador sin pegar la URL, envíale esta línea al administrador:
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="encryptedOutputBox" readonly onclick="this.select()"
+              class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-emerald-400">
+            <button type="button" onclick="copyGeneratedVaultLine()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs border border-slate-700">
+              Copiar línea
             </button>
           </div>
         </div>
       </div>
-    </header>
+    </div>
 
     <!-- Grid Principal -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -182,7 +278,7 @@
             <div id="dailyProgressBar" class="h-full bg-indigo-500 transition-all duration-300" style="width: 0%"></div>
           </div>
 
-          <!-- Lista de Hábitos (con fallback estático por si acaso, que luego JS actualiza) -->
+          <!-- Lista de Hábitos -->
           <div id="habitsList" class="space-y-3 mb-5"></div>
 
           <!-- Añadir Nuevo Hábito -->
@@ -240,12 +336,12 @@
             <span id="dayTypeBadge" class="text-xs font-semibold px-3 py-1 rounded-full"></span>
           </div>
 
-          <!-- Indicador de Carpeta y Token -->
-          <div onclick="toggleConfigPanel()" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-emerald-500/50 cursor-pointer mb-4 transition" title="Haz clic para abrir la configuración del Token">
+          <!-- Indicador de Carpeta y Estado de Cifrado -->
+          <div onclick="toggleOnboardingModal()" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-emerald-500/50 cursor-pointer mb-4 transition">
             <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 flex items-center justify-between">
-              <span>Carpeta en Google Drive (Clic para configurar Token)</span>
+              <span>Carpeta en Drive Personal</span>
               <span id="securityStatusBadge" class="text-[10px] text-amber-400 flex items-center gap-1">
-                <i class="fa-solid fa-key"></i> Configurar Token
+                <i class="fa-solid fa-lock"></i> Sin sesión
               </span>
             </div>
             <div id="folderTreePreview" class="font-mono text-xs text-emerald-400 truncate">
@@ -304,7 +400,27 @@
   </div>
 
   <script>
-    // --- 1. DATOS PREDEFINIDOS SEGUROS ---
+    // =========================================================================
+    // DICCIONARIO DE USUARIOS CIFRADOS (AES-256)
+    // Aquí solo tú (como dueño del repositorio de GitHub) puedes pegar las líneas
+    // que te pasen tus usuarios tras darse de alta en el asistente.
+    // Ejemplo:
+    // var ENCRYPTED_USERS = {
+    //   "miguel": "U2FsdGVkX19...",
+    //   "carlos": "U2FsdGVkX18..."
+    // };
+    // =========================================================================
+    var ENCRYPTED_USERS = {
+      "miguel": "U2FsdGVkX1+65ssDxfF7VtmvqpQINiuJxZiQB4wd8xEmmpgj510DThs0tNk1dHfUstCG/t9883vvDV5VxGIcscuZchzDohyKKEVQmL+nl3LeXl5gAlQKlev5MPVDIG1QNcNHCZoKT+wYLA7xHY59jVetlif2bfV1wgIT8trHr0jIFMp0eUuZmT3j1opy6FnVwtikFVLhr4wt4OddfGD8dkFd9Okjmz3W0a2Zn+VwoFvNvWIhq+vOgbxjjZWm5gzXFIZIeJQGhpbqflq9bpA0OSndXSJ/QC+GVXqMQ515UB/3FyCWRPuUycP7UJ0QoY4sJESw0bIaLK4ScEkMZ2dIz2jZOlVdMuDBmBLqEzNBoMIo7UaL3k1FSxImzALvuDWeDQnmPUAmRNDnNKQKheunXemCCefu7s+JuCHUH13NzrVJtPtTyxqLmU+9xGT1+XB0u5oMSCSNuvC7hEo30+vpVc/1t67jWiQK77ByNlloq5o/iannnIuSB5YZW5Ej6y7nWoxXuuTctk0hIkgGdIlBDZOzfu/7BQ34JPTb7hTPrlA/26wN+4kgbrocpHUBG+1EZ88qecRPZ5oBZ/MI+o38p8/zMQ4PF0+N4ho1vC2t8b9Eym6qS7pEWCFiidpcbUqHcn4w7r70LFUmSEwjE9lz2dxr7rsMtYMkli/DdrHtrae0noGOuLM2TWcZ/n92PUhba6uwb9AIUooh2Hr3Nrj+IddH2pnxrVn2qtvvqpmyxF7aesFPjCrg5ZoiFbK/dnZIEuomenR5AGLIDw62vUn2PRyBcidPHqy9CgwN7g4A5jWeNC6U1K4QZUxn4fpJNYUJQh1ymxDBv2XVy1XhpZgsDA==",
+    };
+
+    // Los 3 perfiles fijos del Script Universal (para que el usuario no tenga que inventar tokens)
+    var SCRIPT_FIXED_PROFILES = {
+      "admin":      { token: "TK_ADMIN_2026_PRO", folder: "Registro_Diario",            label: "👑 Admin" },
+      "invitado":   { token: "TK_INVITADO_2026",  folder: "Registro_Diario_Invitado",   label: "👤 Invitado" },
+      "emergencia": { token: "TK_SOS_2026_999",   folder: "Registro_Diario_Emergencia", label: "🚨 Emergencia" }
+    };
+
     var DEFAULT_HABITS = [
       { id: 'h1', name: 'Entrenamiento de fuerza / Gym', icon: 'fa-dumbbell' },
       { id: 'h2', name: 'Cumplir objetivo de proteína y ayuno', icon: 'fa-drumstick-bite' },
@@ -313,9 +429,11 @@
     ];
 
     var DEFAULT_CONFIG = {
+      userAlias: '',
+      profileRole: 'invitado',
       webhookUrl: '',
-      secretToken: '',
-      rootFolder: 'Registro_Diario',
+      secretToken: 'TK_INVITADO_2026',
+      rootFolder: 'Registro_Diario_Invitado',
       userName: '',
       userEmail: '',
       city: 'Getafe'
@@ -335,22 +453,275 @@
       }
     }
 
-    var habits = loadSafeStorage('ht_habits', DEFAULT_HABITS);
-    var completions = loadSafeStorage('ht_completions', {});
-    var workNotes = loadSafeStorage('ht_work_notes', {});
     var savedCfg = loadSafeStorage('ht_config', DEFAULT_CONFIG);
     var config = {
+      userAlias: savedCfg.userAlias || '',
+      profileRole: savedCfg.profileRole || 'invitado',
       webhookUrl: savedCfg.webhookUrl || '',
-      secretToken: savedCfg.secretToken || '',
-      rootFolder: savedCfg.rootFolder || 'Registro_Diario',
+      secretToken: savedCfg.secretToken || 'TK_INVITADO_2026',
+      rootFolder: savedCfg.rootFolder || 'Registro_Diario_Invitado',
       userName: savedCfg.userName || '',
       userEmail: savedCfg.userEmail || '',
       city: savedCfg.city || 'Getafe'
     };
 
+    // Almacenamiento separado por usuario para no mezclar datos locales
+    function getStoragePrefix() {
+      var alias = (config.userAlias || 'default').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      return 'ht_' + alias + '_';
+    }
+
+    var habits = loadSafeStorage(getStoragePrefix() + 'habits', DEFAULT_HABITS);
+    var completions = loadSafeStorage(getStoragePrefix() + 'completions', {});
+    var workNotes = loadSafeStorage(getStoragePrefix() + 'work_notes', {});
+
+    var currentMasterKey = sessionStorage.getItem('ht_master_key') || '';
     var selectedDate = new Date();
     var chartInstance = null;
 
+    function reloadUserLocalData() {
+      habits = loadSafeStorage(getStoragePrefix() + 'habits', DEFAULT_HABITS);
+      completions = loadSafeStorage(getStoragePrefix() + 'completions', {});
+      workNotes = loadSafeStorage(getStoragePrefix() + 'work_notes', {});
+    }
+
+    // --- ASISTENTE DE NUEVOS USUARIOS Y PERFILES FIJOS ---
+    function toggleOnboardingModal() {
+      var modal = document.getElementById('onboardingModal');
+      if (!modal) return;
+      populateConfigInputs();
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function onProfileRoleChange() {
+      var role = document.getElementById('profileRoleSelect').value;
+      var preset = SCRIPT_FIXED_PROFILES[role] || SCRIPT_FIXED_PROFILES['invitado'];
+      document.getElementById('secretTokenInput').value = preset.token;
+      document.getElementById('rootFolderInput').value = preset.folder;
+    }
+
+    function populateConfigInputs() {
+      document.getElementById('wizUserAlias').value = config.userAlias || '';
+      document.getElementById('profileRoleSelect').value = config.profileRole || 'invitado';
+      document.getElementById('webhookUrlInput').value = config.webhookUrl || '';
+      document.getElementById('secretTokenInput').value = config.secretToken || 'TK_INVITADO_2026';
+      document.getElementById('rootFolderInput').value = config.rootFolder || 'Registro_Diario_Invitado';
+      document.getElementById('userNameInput').value = config.userName || '';
+      document.getElementById('userEmailInput').value = config.userEmail || '';
+      document.getElementById('userCityInput').value = config.city || 'Getafe';
+    }
+
+    function saveAndGenerateUserVault() {
+      var alias = document.getElementById('wizUserAlias').value.trim().toLowerCase() || 'usuario';
+      var role = document.getElementById('profileRoleSelect').value || 'invitado';
+      var preset = SCRIPT_FIXED_PROFILES[role] || SCRIPT_FIXED_PROFILES['invitado'];
+      var urlVal = document.getElementById('webhookUrlInput').value.trim();
+      var pass = document.getElementById('encryptPassInput').value.trim();
+
+      if (!urlVal) {
+        alert('Por favor, pega la URL /exec de tu Google Apps Script en el Paso 2.');
+        return;
+      }
+      if (!pass) {
+        alert('Por favor, escribe una contraseña en el Paso 3 para proteger tu cuenta.');
+        return;
+      }
+
+      config.userAlias = alias;
+      config.profileRole = role;
+      config.webhookUrl = urlVal;
+      config.secretToken = preset.token;
+      config.rootFolder = preset.folder;
+      config.userName = document.getElementById('userNameInput').value.trim() || alias;
+      config.userEmail = document.getElementById('userEmailInput').value.trim();
+      config.city = document.getElementById('userCityInput').value.trim() || 'Getafe';
+
+      reloadUserLocalData();
+
+      var payload = {
+        userAlias: config.userAlias,
+        profileRole: config.profileRole,
+        webhookUrl: config.webhookUrl,
+        secretToken: config.secretToken,
+        rootFolder: config.rootFolder,
+        userName: config.userName,
+        userEmail: config.userEmail,
+        city: config.city,
+        habits: habits
+      };
+
+      var encrypted = CryptoJS.AES.encrypt(JSON.stringify(payload), pass).toString();
+
+      // Guardamos en el diccionario local del navegador para que este usuario ya pueda entrar siempre aquí
+      var localUsers = loadSafeStorage('ht_local_encrypted_users', {});
+      localUsers[alias] = encrypted;
+      localStorage.setItem('ht_local_encrypted_users', JSON.stringify(localUsers));
+
+      localStorage.setItem('ht_config', JSON.stringify(config));
+      currentMasterKey = pass;
+      sessionStorage.setItem('ht_master_key', pass);
+
+      // Mostramos la línea lista por si se quiere añadir a ENCRYPTED_USERS en GitHub
+      var lineForGithub = '"' + alias + '": "' + encrypted + '",';
+      document.getElementById('encryptedOutputBox').value = lineForGithub;
+      document.getElementById('generatedCodeContainer').classList.remove('hidden');
+
+      renderProfileHeader();
+      fetchWeather();
+      saveParamsToDriveSilent();
+      updateUI();
+      fetchWeekFromDrive(false);
+    }
+
+    function copyGeneratedVaultLine() {
+      var box = document.getElementById('encryptedOutputBox');
+      box.select();
+      navigator.clipboard.writeText(box.value);
+    }
+
+    // --- DESBLOQUEO MULTI-USUARIO CON USUARIO + KEY ---
+    function unlockWithMasterKey() {
+      var alias = document.getElementById('loginUserInput').value.trim().toLowerCase();
+      var pass = document.getElementById('masterKeyInput').value.trim();
+      var statusEl = document.getElementById('unlockStatusText');
+
+      if (!alias || !pass) {
+        statusEl.className = 'text-xs text-amber-400';
+        statusEl.textContent = 'Escribe tu alias de Usuario y tu Contraseña (o pulsa "Nuevos Usuarios" si es tu primera vez).';
+        return;
+      }
+
+      var localUsers = loadSafeStorage('ht_local_encrypted_users', {});
+      var cipherText = ENCRYPTED_USERS[alias] || localUsers[alias] || '';
+
+      if (!cipherText) {
+        statusEl.className = 'text-xs text-amber-400';
+        statusEl.textContent = 'El usuario "' + alias + '" no está registrado aún. Pulsa el botón verde "Nuevos Usuarios (Guía)" para darte de alta.';
+        return;
+      }
+
+      try {
+        var bytes = CryptoJS.AES.decrypt(cipherText, pass);
+        var decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decryptedStr) throw new Error('Clave incorrecta');
+
+        var parsed = JSON.parse(decryptedStr);
+        currentMasterKey = pass;
+        sessionStorage.setItem('ht_master_key', pass);
+
+        config.userAlias = parsed.userAlias || alias;
+        config.profileRole = parsed.profileRole || 'invitado';
+        config.webhookUrl = parsed.webhookUrl || '';
+        config.secretToken = parsed.secretToken || 'TK_INVITADO_2026';
+        config.rootFolder = parsed.rootFolder || 'Registro_Diario_Invitado';
+        config.userName = parsed.userName || alias;
+        config.userEmail = parsed.userEmail || '';
+        config.city = parsed.city || 'Getafe';
+
+        localStorage.setItem('ht_config', JSON.stringify(config));
+        reloadUserLocalData();
+
+        if (Array.isArray(parsed.habits) && parsed.habits.length > 0) {
+          habits = parsed.habits;
+          localStorage.setItem(getStoragePrefix() + 'habits', JSON.stringify(habits));
+        }
+
+        document.getElementById('masterKeyInput').value = '';
+        statusEl.className = 'text-xs text-emerald-400 font-semibold';
+        statusEl.textContent = '✅ Sesión iniciada como ' + config.userName + '. Sincronizando semana con tu Drive...';
+
+        renderProfileHeader();
+        fetchWeather();
+        updateUI();
+        fetchWeekFromDrive(false);
+      } catch (e) {
+        statusEl.className = 'text-xs text-rose-400 font-semibold';
+        statusEl.textContent = '❌ Contraseña incorrecta para el usuario "' + alias + '".';
+      }
+    }
+
+    function lockAndClearLocal() {
+      sessionStorage.removeItem('ht_master_key');
+      localStorage.removeItem('ht_config');
+      currentMasterKey = '';
+      config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+      reloadUserLocalData();
+      populateConfigInputs();
+      renderProfileHeader();
+      updateUI();
+      document.getElementById('onboardingModal').classList.add('hidden');
+    }
+
+    // Copiar el Script Universal de 3 perfiles con 1 clic para que el usuario nuevo no tenga que editar nada
+    function copyUniversalScript() {
+      var scriptCode = [
+        'const PROFILES_DB = {',
+        '  "admin":      { token: "TK_ADMIN_2026_PRO", folderName: "Registro_Diario" },',
+        '  "invitado":   { token: "TK_INVITADO_2026",  folderName: "Registro_Diario_Invitado" },',
+        '  "emergencia": { token: "TK_SOS_2026_999",   folderName: "Registro_Diario_Emergencia" }',
+        '};',
+        'function isValidLogFileName(n){return /^\\d{4}-\\d{2}-\\d{2}_registro\\.txt$/.test(String(n||"").trim());}',
+        'function getAuthorizedFolder(pk,tk,create){',
+        '  var p=PROFILES_DB[String(pk||"invitado").toLowerCase()];',
+        '  if(!p){for(var k in PROFILES_DB){if(PROFILES_DB[k].token===tk){p=PROFILES_DB[k];break;}}}',
+        '  if(!p||!tk||p.token!==tk)return null;',
+        '  var f=DriveApp.getFoldersByName(p.folderName);',
+        '  return f.hasNext()?f.next():(create?DriveApp.createFolder(p.folderName):null);',
+        '}',
+        'function doGet(e){',
+        '  try{',
+        '    var pr=e.parameter||{},rf=getAuthorizedFolder(pr.profile,pr.token,false);',
+        '    if(!rf)return jsonResponse({status:"ok",found:false,days:{},params:null});',
+        '    if(pr.action==="getParams")return jsonResponse({status:"ok",found:true,params:readParamsFile(rf)});',
+        '    if(pr.action==="getWeek"&&pr.dates){',
+        '      var dk=pr.dates.split(","),dr={};',
+        '      for(var i=0;i<Math.min(dk.length,14);i++){var d=dk[i].trim(),fn=d+"_registro.txt";if(isValidLogFileName(fn))dr[d]=readSingleDayFile(rf,fn);}',
+        '      return jsonResponse({status:"ok",days:dr,params:readParamsFile(rf)});',
+        '    }',
+        '    return jsonResponse(readSingleDayFile(rf,pr.fileName));',
+        '  }catch(err){return jsonResponse({status:"error",message:err.toString()});}',
+        '}',
+        'function doPost(e){',
+        '  try{',
+        '    var d=JSON.parse(e.postData.contents),rf=getAuthorizedFolder(d.profile,d.token,true);',
+        '    if(!rf)return jsonResponse({status:"error",message:"No autorizado"});',
+        '    if(d.action==="saveParams"&&d.params){',
+        '      var ef=rf.getFilesByName("parametros.json"),jc=JSON.stringify(d.params,null,2);',
+        '      if(ef.hasNext())ef.next().setContent(jc);else rf.createFile("parametros.json",jc,MimeType.PLAIN_TEXT);',
+        '      return jsonResponse({status:"ok"});',
+        '    }',
+        '    if(!isValidLogFileName(d.fileName))return jsonResponse({status:"error"});',
+        '    var exf=rf.getFilesByName(d.fileName),mf=exf.hasNext()?exf.next():null;',
+        '    var fc=["==================================================","REGISTRO DIARIO CONSOLIDADO - FECHA: "+d.dateKey,"==================================================","",d.habitsSummary,"","--- REGISTRO DE ACTIVIDAD / NOTAS LABORALES ---",d.rawNotes||"(Sin notas registradas)",""].join("\\n");',
+        '    if(mf)mf.setContent(fc);else rf.createFile(d.fileName,fc,MimeType.PLAIN_TEXT);',
+        '    return jsonResponse({status:"ok"});',
+        '  }catch(err){return jsonResponse({status:"error",message:err.toString()});}',
+        '}',
+        'function readSingleDayFile(rf,fn){',
+        '  var f=rf.getFilesByName(fn);if(!f.hasNext())return{status:"ok",found:false};',
+        '  var txt=f.next().getBlob().getDataAsString(),mk="--- REGISTRO DE ACTIVIDAD / NOTAS LABORALES ---";',
+        '  var rn=txt.indexOf(mk)!==-1?txt.split(mk)[1].trim():txt,ch=[],ah=[],ln=txt.split("\\n");',
+        '  for(var i=0;i<ln.length;i++){var l=ln[i].trim();if(l.indexOf("[x] ")===0){var h=l.replace("[x] ","").trim();ch.push(h);ah.push(h);}else if(l.indexOf("[ ] ")===0){ah.push(l.replace("[ ] ","").trim());}}',
+        '  return{status:"ok",found:true,rawNotes:rn,completedHabitNames:ch,allHabitNames:ah};',
+        '}',
+        'function readParamsFile(rf){var f=rf.getFilesByName("parametros.json");if(!f.hasNext())return null;try{return JSON.parse(f.next().getBlob().getDataAsString());}catch(e){return null;}}',
+        'function jsonResponse(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}'
+      ].join('\n');
+
+      navigator.clipboard.writeText(scriptCode).then(function() {
+        var btn = document.getElementById('btnCopyScript');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> ¡Script Copiado al Portapapeles!';
+        setTimeout(function() {
+          btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copiar Script Universal Fijo';
+        }, 3000);
+      });
+    }
+
+    // --- UTILIDADES Y RENDERIZADO ---
     function normalizeText(str) {
       return String(str || '').trim().toLowerCase();
     }
@@ -400,49 +771,6 @@
       return days;
     }
 
-    // --- 2. PANEL DE CONFIGURACIÓN Y TOKEN ---
-    function toggleConfigPanel() {
-      var panel = document.getElementById('inlineConfigPanel');
-      if (!panel) return;
-      populateConfigInputs();
-      if (panel.classList.contains('hidden')) {
-        panel.classList.remove('hidden');
-      } else {
-        panel.classList.add('hidden');
-      }
-    }
-
-    function populateConfigInputs() {
-      var u = document.getElementById('webhookUrlInput');
-      var t = document.getElementById('secretTokenInput');
-      var r = document.getElementById('rootFolderInput');
-      var n = document.getElementById('userNameInput');
-      var e = document.getElementById('userEmailInput');
-      var c = document.getElementById('userCityInput');
-      if (u) u.value = config.webhookUrl || '';
-      if (t) t.value = config.secretToken || '';
-      if (r) r.value = config.rootFolder || 'Registro_Diario';
-      if (n) n.value = config.userName || '';
-      if (e) e.value = config.userEmail || '';
-      if (c) c.value = config.city || 'Getafe';
-    }
-
-    function saveConfig() {
-      config.webhookUrl = document.getElementById('webhookUrlInput').value.trim();
-      config.secretToken = document.getElementById('secretTokenInput').value.trim();
-      config.rootFolder = document.getElementById('rootFolderInput').value.trim() || 'Registro_Diario';
-      config.userName = document.getElementById('userNameInput').value.trim();
-      config.userEmail = document.getElementById('userEmailInput').value.trim();
-      config.city = document.getElementById('userCityInput').value.trim() || 'Getafe';
-
-      localStorage.setItem('ht_config', JSON.stringify(config));
-      renderProfileHeader();
-      fetchWeather();
-      saveParamsToDriveSilent();
-      toggleConfigPanel();
-      updateUI();
-    }
-
     function renderProfileHeader() {
       var titleEl = document.getElementById('mainHeaderTitle');
       var namePart = config.userName ? ('de ' + config.userName) : 'Diaria';
@@ -463,19 +791,32 @@
         }
       }
 
+      var roleBadge = document.getElementById('userRoleBadge');
+      var preset = SCRIPT_FIXED_PROFILES[config.profileRole];
+      if (roleBadge && config.webhookUrl && preset) {
+        roleBadge.textContent = preset.label;
+        roleBadge.classList.remove('hidden');
+      } else if (roleBadge) {
+        roleBadge.classList.add('hidden');
+      }
+
       var secBadge = document.getElementById('securityStatusBadge');
-      if (secBadge) {
-        if (config.secretToken) {
+      var sessionTag = document.getElementById('activeSessionTag');
+      if (config.webhookUrl && config.secretToken) {
+        if (secBadge) {
           secBadge.className = 'text-[10px] text-emerald-400 flex items-center gap-1';
-          secBadge.innerHTML = '<i class="fa-solid fa-lock"></i> Token Guardado';
-        } else {
-          secBadge.className = 'text-[10px] text-amber-400 flex items-center gap-1';
-          secBadge.innerHTML = '<i class="fa-solid fa-unlock"></i> Falta Token (Clic aquí)';
+          secBadge.innerHTML = '<i class="fa-solid fa-unlock-keyhole"></i> Conectado (' + (config.userAlias || config.profileRole) + ')';
         }
+        if (sessionTag) sessionTag.classList.remove('hidden');
+      } else {
+        if (secBadge) {
+          secBadge.className = 'text-[10px] text-amber-400 flex items-center gap-1';
+          secBadge.innerHTML = '<i class="fa-solid fa-lock"></i> Sin sesión (Usa la barra superior)';
+        }
+        if (sessionTag) sessionTag.classList.add('hidden');
       }
     }
 
-    // --- 3. CLIMA EN CABECERA ---
     function fetchWeather() {
       var city = (config.city || 'Getafe').trim();
       var cityEl = document.getElementById('weatherCity');
@@ -514,7 +855,6 @@
       return { desc: 'Variable', icon: 'fa-cloud', color: 'text-sky-300' };
     }
 
-    // --- 4. NAVEGACIÓN Y RENDERIZADO ---
     function goToToday() {
       selectedDate = new Date();
       updateUI();
@@ -685,7 +1025,7 @@
       } else {
         completions[dateKey].push(habitId);
       }
-      localStorage.setItem('ht_completions', JSON.stringify(completions));
+      localStorage.setItem(getStoragePrefix() + 'completions', JSON.stringify(completions));
       updateUI();
     }
 
@@ -696,7 +1036,7 @@
       if (!name) return;
       var icon = iconSelect ? iconSelect.value : inferIconForHabit(name);
       habits.push({ id: 'h_' + Date.now(), name: name, icon: icon });
-      localStorage.setItem('ht_habits', JSON.stringify(habits));
+      localStorage.setItem(getStoragePrefix() + 'habits', JSON.stringify(habits));
       input.value = '';
       updateUI();
       saveParamsToDriveSilent();
@@ -708,14 +1048,14 @@
         if (habits[i].id !== id) filtered.push(habits[i]);
       }
       habits = filtered;
-      localStorage.setItem('ht_habits', JSON.stringify(habits));
+      localStorage.setItem(getStoragePrefix() + 'habits', JSON.stringify(habits));
       updateUI();
       saveParamsToDriveSilent();
     }
 
     function restoreDefaultHabits() {
       habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
-      localStorage.setItem('ht_habits', JSON.stringify(habits));
+      localStorage.setItem(getStoragePrefix() + 'habits', JSON.stringify(habits));
       updateUI();
       saveParamsToDriveSilent();
     }
@@ -788,9 +1128,8 @@
       } catch (err) {}
     }
 
-    // --- 5. NOTAS Y SINCRONIZACIÓN CON GOOGLE DRIVE ---
     function renderWorkLogSection(dateKey) {
-      var rootName = config.rootFolder || 'Registro_Diario';
+      var rootName = config.rootFolder || 'Registro_Diario_Invitado';
       document.getElementById('folderTreePreview').textContent = rootName + ' / ' + dateKey + '_registro.txt';
 
       var workday = isWorkday(selectedDate);
@@ -804,7 +1143,7 @@
       if (workday) {
         badge.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
         badge.textContent = 'Laborable';
-        statusText.textContent = 'Registro activo para guardar en carpeta única';
+        statusText.textContent = 'Registro activo para guardar en tu Google Drive';
         weekendBanner.classList.add('hidden');
         workLogContainer.classList.remove('hidden');
       } else {
@@ -844,7 +1183,7 @@
       var dateKey = formatDateKey(selectedDate);
       var content = document.getElementById('workNotesTextarea').value;
       workNotes[dateKey] = content;
-      localStorage.setItem('ht_work_notes', JSON.stringify(workNotes));
+      localStorage.setItem(getStoragePrefix() + 'work_notes', JSON.stringify(workNotes));
       renderWeekDaysStrip();
     }
 
@@ -888,7 +1227,7 @@
 
     function syncToGoogleDrive() {
       if (!config.webhookUrl) {
-        toggleConfigPanel();
+        toggleOnboardingModal();
         return;
       }
 
@@ -908,15 +1247,15 @@
       btn.disabled = true;
       statusMsg.classList.remove('hidden');
       statusMsg.className = 'text-xs text-center text-cyan-400 mt-2';
-      statusMsg.textContent = 'Guardando ' + dateKey + '_registro.txt en Drive...';
+      statusMsg.textContent = 'Guardando ' + dateKey + '_registro.txt en tu Drive...';
 
       fetch(config.webhookUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          token: config.secretToken || '',
-          rootFolder: config.rootFolder || 'Registro_Diario',
+          profile: config.profileRole || 'invitado',
+          token: config.secretToken || 'TK_INVITADO_2026',
           action: 'saveDay',
           fileName: dateKey + '_registro.txt',
           dateKey: dateKey,
@@ -936,7 +1275,7 @@
 
     function fetchWeekFromDrive(silent) {
       if (!config.webhookUrl) {
-        if (!silent) toggleConfigPanel();
+        if (!silent) toggleOnboardingModal();
         return;
       }
 
@@ -955,14 +1294,14 @@
       if (!silent) {
         statusMsg.classList.remove('hidden');
         statusMsg.className = 'text-xs text-center text-cyan-400 mt-2';
-        statusMsg.textContent = 'Cargando semana (' + firstKey + ' al ' + lastKey + ') desde Drive...';
+        statusMsg.textContent = 'Cargando semana (' + firstKey + ' al ' + lastKey + ') desde tu Drive...';
       }
 
       var sep = config.webhookUrl.indexOf('?') === -1 ? '?' : '&';
       var fullUrl = config.webhookUrl + sep +
         'action=getWeek' +
-        '&token=' + encodeURIComponent(config.secretToken || '') +
-        '&rootFolder=' + encodeURIComponent(config.rootFolder || 'Registro_Diario') +
+        '&profile=' + encodeURIComponent(config.profileRole || 'invitado') +
+        '&token=' + encodeURIComponent(config.secretToken || 'TK_INVITADO_2026') +
         '&dates=' + encodeURIComponent(dateKeys.join(','));
 
       fetch(fullUrl, { method: 'GET' })
@@ -973,7 +1312,7 @@
             if (!silent) {
               statusMsg.classList.remove('hidden');
               statusMsg.className = 'text-xs text-center text-rose-400 mt-2';
-              statusMsg.textContent = data.message || 'Token rechazado por el script.';
+              statusMsg.textContent = data.message || 'Acceso denegado por el script.';
             }
             return;
           }
@@ -994,9 +1333,9 @@
               processSingleDayData(formatDateKey(selectedDate), data);
             }
 
-            localStorage.setItem('ht_habits', JSON.stringify(habits));
-            localStorage.setItem('ht_completions', JSON.stringify(completions));
-            localStorage.setItem('ht_work_notes', JSON.stringify(workNotes));
+            localStorage.setItem(getStoragePrefix() + 'habits', JSON.stringify(habits));
+            localStorage.setItem(getStoragePrefix() + 'completions', JSON.stringify(completions));
+            localStorage.setItem(getStoragePrefix() + 'work_notes', JSON.stringify(workNotes));
             updateUI();
 
             if (!silent) {
@@ -1004,7 +1343,7 @@
               statusMsg.className = loadedCount > 0 ? 'text-xs text-center text-emerald-400 mt-2' : 'text-xs text-center text-amber-400 mt-2';
               statusMsg.textContent = loadedCount > 0
                 ? 'Semana cargada: ' + loadedCount + ' día(s) recuperados (' + firstKey + ' a ' + lastKey + ').'
-                : 'No hay registros en Drive para la semana del ' + firstKey + ' al ' + lastKey + '.';
+                : 'Conectado correctamente. Aún no hay archivos guardados para la semana del ' + firstKey + ' al ' + lastKey + '.';
             }
           }
         })
@@ -1013,7 +1352,7 @@
           if (!silent) {
             statusMsg.classList.remove('hidden');
             statusMsg.className = 'text-xs text-center text-rose-400 mt-2';
-            statusMsg.textContent = 'Error al consultar Drive. Verifica la URL del Webhook y el Token.';
+            statusMsg.textContent = 'Error al consultar Drive.';
           }
         });
     }
@@ -1060,6 +1399,14 @@
 
     function applyRemoteParams(paramsObj) {
       if (!paramsObj) return;
+      if (paramsObj.encryptedVault && currentMasterKey) {
+        try {
+          var bytes = CryptoJS.AES.decrypt(paramsObj.encryptedVault, currentMasterKey);
+          var dec = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+          if (dec) paramsObj = dec;
+        } catch (e) {}
+      }
+
       if (paramsObj.userName) config.userName = paramsObj.userName;
       if (paramsObj.userEmail) config.userEmail = paramsObj.userEmail;
       if (paramsObj.city) config.city = paramsObj.city;
@@ -1074,7 +1421,7 @@
           });
         }
         habits = newHabits;
-        localStorage.setItem('ht_habits', JSON.stringify(habits));
+        localStorage.setItem(getStoragePrefix() + 'habits', JSON.stringify(habits));
       }
       localStorage.setItem('ht_config', JSON.stringify(config));
       populateConfigInputs();
@@ -1082,42 +1429,32 @@
       fetchWeather();
     }
 
-    function loadParamsFromDrive() {
-      var urlVal = document.getElementById('webhookUrlInput').value.trim() || config.webhookUrl;
-      var tokenVal = document.getElementById('secretTokenInput').value.trim() || config.secretToken;
-      var folderVal = document.getElementById('rootFolderInput').value.trim() || config.rootFolder || 'Registro_Diario';
-      if (!urlVal) return;
-
-      var sep = urlVal.indexOf('?') === -1 ? '?' : '&';
-      var fullUrl = urlVal + sep + 'action=getParams&token=' + encodeURIComponent(tokenVal) + '&rootFolder=' + encodeURIComponent(folderVal);
-
-      fetch(fullUrl, { method: 'GET' })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (data.status === 'ok' && data.params) {
-            applyRemoteParams(data.params);
-            updateUI();
-          }
-        })
-        .catch(function() {});
-    }
-
     function saveParamsToDriveSilent() {
       if (!config.webhookUrl) return;
+      var plainParams = {
+        userAlias: config.userAlias,
+        profileRole: config.profileRole,
+        userName: config.userName,
+        userEmail: config.userEmail,
+        city: config.city,
+        habits: habits
+      };
+
+      var dataToSave = plainParams;
+      if (currentMasterKey && typeof CryptoJS !== 'undefined') {
+        var cipher = CryptoJS.AES.encrypt(JSON.stringify(plainParams), currentMasterKey).toString();
+        dataToSave = { encryptedVault: cipher };
+      }
+
       fetch(config.webhookUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          token: config.secretToken || '',
-          rootFolder: config.rootFolder || 'Registro_Diario',
+          profile: config.profileRole || 'invitado',
+          token: config.secretToken || 'TK_INVITADO_2026',
           action: 'saveParams',
-          params: {
-            userName: config.userName,
-            userEmail: config.userEmail,
-            city: config.city,
-            habits: habits
-          }
+          params: dataToSave
         })
       }).catch(function() {});
     }
@@ -1159,7 +1496,6 @@
       }
     }
 
-    // --- 6. ARRANQUE INMEDIATO ---
     function init() {
       if (!habits || habits.length === 0) {
         habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
@@ -1169,10 +1505,8 @@
       goToToday();
       fetchWeather();
 
-      // Si aún no has metido la URL o el Token, despliega automáticamente la caja del Token arriba
-      if (!config.webhookUrl || !config.secretToken) {
-        var panel = document.getElementById('inlineConfigPanel');
-        if (panel) panel.classList.remove('hidden');
+      if (config.webhookUrl && config.secretToken) {
+        fetchWeekFromDrive(true);
       }
     }
 
